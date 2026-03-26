@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenFang",
+  "productName": "润建Claw",
   "version": "0.1.0",
-  "identifier": "ai.openfang.desktop",
+  "identifier": "ai.runjianclaw.desktop",
   "build": {},
   "app": {
     "windows": [],
