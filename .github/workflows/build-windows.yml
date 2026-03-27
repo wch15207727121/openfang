@@ -48,10 +48,25 @@ jobs:
         with:
           key: windows-desktop-${{ matrix.target }}
 
+      - name: Install WiX Toolset (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Download WiX Toolset 3.14
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314-binaries.zip" -OutFile "wix314-binaries.zip"
+          # Extract to temp directory
+          Expand-Archive -Path "wix314-binaries.zip" -DestinationPath "wix314"
+          # Set WiX path as environment variable
+          echo "WIX_PATH=$pwd\wix314" >> $env:GITHUB_ENV
+          # Verify WiX is available
+          $env:PATH += ";$pwd\wix314"
+          heat.exe --version
+
       - name: Build and bundle Tauri desktop app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WIX: ${{ env.WIX_PATH }}
         with:
           projectPath: crates/openfang-desktop
           args: "--target ${{ matrix.target }}"
