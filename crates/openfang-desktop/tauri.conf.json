@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "润建Claw",
+  "productName": "RunJianClaw",
   "version": "0.1.0",
   "identifier": "ai.runjianclaw.desktop",
   "build": {},

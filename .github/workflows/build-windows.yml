@@ -3,7 +3,7 @@ name: Build Windows Desktop
 on:
   push:
     branches:
-      - devops
+      - devops1
     paths:
       - 'crates/openfang-desktop/**'
       - '.github/workflows/build-windows.yml'
