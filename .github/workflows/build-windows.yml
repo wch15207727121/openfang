@@ -58,9 +58,10 @@ jobs:
           Expand-Archive -Path "wix314-binaries.zip" -DestinationPath "wix314"
           # Set WiX path as environment variable
           echo "WIX_PATH=$pwd\wix314" >> $env:GITHUB_ENV
-          # Verify WiX is available
+          # Add to PATH
           $env:PATH += ";$pwd\wix314"
-          heat.exe --version
+          # Verify WiX is available (check candle.exe version)
+          candle.exe -version
 
       - name: Build and bundle Tauri desktop app
         uses: tauri-apps/tauri-action@v0
