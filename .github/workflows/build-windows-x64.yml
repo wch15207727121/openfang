@@ -1,0 +1,62 @@
+name: Build Windows x64 Desktop
+
+on:
+  push:
+    branches:
+      - devops1
+    paths:
+      - 'crates/openfang-desktop/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-windows-x64:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: windows-x64-desktop
+
+      - name: Install WiX Toolset
+        shell: pwsh
+        run: |
+          # Download WiX Toolset 3.14
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314-binaries.zip" -OutFile "wix314-binaries.zip"
+          # Extract to temp directory
+          Expand-Archive -Path "wix314-binaries.zip" -DestinationPath "wix314"
+          # Set WiX path as environment variable
+          echo "WIX_PATH=$pwd\wix314" >> $env:GITHUB_ENV
+          # Add to PATH
+          $env:PATH += ";$pwd\wix314"
+          # Verify WiX is available
+          candle.exe -version
+
+      - name: Build and bundle Tauri desktop app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WIX: ${{ env.WIX_PATH }}
+        with:
+          projectPath: crates/openfang-desktop
+          args: "--target x86_64-pc-windows-msvc"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-desktop
+          path: crates/openfang-desktop/target/x86_64-pc-windows-msvc/release/bundle/*
