@@ -46,24 +46,6 @@ jobs:
           # Verify WiX is available
           candle.exe -version
 
-      - name: Install WiX Toolset (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # Create WiX directory
-          $wixPath = "$env:LOCALAPPDATA\tauri\WiXTools314"
-          New-Item -ItemType Directory -Force -Path $wixPath
-          
-          # Download WiX Toolset 3.14
-          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314-binaries.zip" -OutFile "$env:TEMP\wix314-binaries.zip"
-          
-          # Extract to Tauri's expected location
-          Expand-Archive -Path "$env:TEMP\wix314-binaries.zip" -DestinationPath $wixPath -Force
-          
-          # Verify WiX tools are available
-          & "$wixPath\candle.exe" -version
-          & "$wixPath\light.exe" -version
-
       - name: Build and bundle Tauri desktop app
         uses: tauri-apps/tauri-action@v0
         env:
