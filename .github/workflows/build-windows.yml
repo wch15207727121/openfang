@@ -1,4 +1,4 @@
-name: Build Windows x64 Desktop
+name: Build Windows Desktop
 
 on:
   push:
@@ -6,6 +6,13 @@ on:
       - devops
     paths:
       - 'crates/openfang-desktop/**'
+      - '.github/workflows/build-windows.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'crates/openfang-desktop/**'
+      - '.github/workflows/build-windows.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,9 +22,18 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-windows-x64:
-    name: Build Windows x64
+  build-windows:
+    name: Build Windows Desktop / ${{ matrix.target }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            arch: x86_64
+          - target: aarch64-pc-windows-msvc
+            arch: aarch64
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -25,38 +41,42 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: ${{ matrix.target }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: windows-x64-desktop
+          key: windows-desktop-${{ matrix.target }}
 
-      - name: Install WiX Toolset
+      - name: Install WiX Toolset (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # Create WiX directory
+          $wixPath = "$env:LOCALAPPDATA\tauri\WiXTools314"
+          New-Item -ItemType Directory -Force -Path $wixPath
+          
           # Download WiX Toolset 3.14
-          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314-binaries.zip" -OutFile "wix314-binaries.zip"
-          # Extract to temp directory
-          Expand-Archive -Path "wix314-binaries.zip" -DestinationPath "wix314"
-          # Set WiX path as environment variable
-          echo "WIX_PATH=$pwd\wix314" >> $env:GITHUB_ENV
-          # Add to PATH
-          $env:PATH += ";$pwd\wix314"
-          # Verify WiX is available
-          candle.exe -version
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314-binaries.zip" -OutFile "$env:TEMP\wix314-binaries.zip"
+          
+          # Extract to Tauri's expected location
+          Expand-Archive -Path "$env:TEMP\wix314-binaries.zip" -DestinationPath $wixPath -Force
+          
+          # Verify WiX tools are available
+          & "$wixPath\candle.exe" -version
+          & "$wixPath\light.exe" -version
 
       - name: Build and bundle Tauri desktop app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WIX: ${{ env.WIX_PATH }}
         with:
           projectPath: crates/openfang-desktop
-          args: "--target x86_64-pc-windows-msvc"
+          args: "--target ${{ matrix.target }}"
+          releaseId: ${{ github.event.pull_request.number || github.sha }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64-desktop
-          path: crates/openfang-desktop/target/x86_64-pc-windows-msvc/release/bundle/*
+          name: windows-desktop-${{ matrix.arch }}
+          path: crates/openfang-desktop/target/${{ matrix.target }}/release/bundle/*
