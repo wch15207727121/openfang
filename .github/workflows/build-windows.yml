@@ -1,18 +1,11 @@
-name: Build Windows Desktop
+name: Build Windows x64 Desktop
 
 on:
   push:
     branches:
-      - devops1
+      - devops
     paths:
       - 'crates/openfang-desktop/**'
-      - '.github/workflows/build-windows.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'crates/openfang-desktop/**'
-      - '.github/workflows/build-windows.yml'
   workflow_dispatch:
 
 permissions:
@@ -22,18 +15,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-windows:
-    name: Build Windows Desktop / ${{ matrix.target }}
+  build-windows-x64:
+    name: Build Windows x64
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-pc-windows-msvc
-            arch: x86_64
-          - target: aarch64-pc-windows-msvc
-            arch: aarch64
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -41,15 +25,14 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: x86_64-pc-windows-msvc
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: windows-desktop-${{ matrix.target }}
+          key: windows-x64-desktop
 
-      - name: Install WiX Toolset (Windows)
-        if: runner.os == 'Windows'
+      - name: Install WiX Toolset
         shell: pwsh
         run: |
           # Download WiX Toolset 3.14
@@ -58,9 +41,10 @@ jobs:
           Expand-Archive -Path "wix314-binaries.zip" -DestinationPath "wix314"
           # Set WiX path as environment variable
           echo "WIX_PATH=$pwd\wix314" >> $env:GITHUB_ENV
-          # Verify WiX is available
+          # Add to PATH
           $env:PATH += ";$pwd\wix314"
-          heat.exe --version
+          # Verify WiX is available
+          candle.exe -version
 
       - name: Build and bundle Tauri desktop app
         uses: tauri-apps/tauri-action@v0
@@ -69,11 +53,10 @@ jobs:
           WIX: ${{ env.WIX_PATH }}
         with:
           projectPath: crates/openfang-desktop
-          args: "--target ${{ matrix.target }}"
-          releaseId: ${{ github.event.pull_request.number || github.sha }}
+          args: "--target x86_64-pc-windows-msvc"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-desktop-${{ matrix.arch }}
-          path: crates/openfang-desktop/target/${{ matrix.target }}/release/bundle/*
+          name: windows-x64-desktop
+          path: crates/openfang-desktop/target/x86_64-pc-windows-msvc/release/bundle/*
